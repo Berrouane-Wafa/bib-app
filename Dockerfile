@@ -21,3 +21,7 @@ RUN composer install --no-dev --optimize-autoloader
 
 # Permissions
 RUN chown -R www-data:www-data /var/www/html/storage /var/www/html/bootstrap/cache
+
+# !!! C'EST ICI QU'IL FAUT AJOUTER LA COMMANDE !!!
+# On exécute la migration pendant la construction de l'image
+RUN php artisan migrate --force
