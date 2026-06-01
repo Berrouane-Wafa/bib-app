@@ -42,27 +42,34 @@
 # 1. Utilisation d'une image PHP 8.2 avec Apache
 FROM php:8.2-apache
 
-# 1. Installation des dépendances
-RUN apt-get update && apt-get install -y libpng-dev libjpeg-dev libfreetype6-dev libpq-dev zip unzip git \
+# 1. Installation des dépendances système (PHP et Node.js pour Vite)
+RUN apt-get update && apt-get install -y \
+    libpng-dev libjpeg-dev libfreetype6-dev libpq-dev zip unzip git \
+    curl && curl -fsSL https://deb.nodesource.com/setup_18.x | bash - && \
+    apt-get install -y nodejs \
     && docker-php-ext-configure gd --with-freetype --with-jpeg \
     && docker-php-ext-install -j$(nproc) gd pdo pdo_mysql pdo_pgsql
 
+# 2. Installation de Composer
 COPY --from=composer:latest /usr/bin/composer /usr/bin/composer
 
-# 2. Configuration d'Apache
+# 3. Configuration Apache
 RUN sed -i 's|/var/www/html|/var/www/html/public|g' /etc/apache2/sites-available/000-default.conf
 RUN a2enmod rewrite
 
-# 3. Préparation du code
+# 4. Copie du code
 WORKDIR /var/www/html
 COPY . .
+
+# 5. Installation des dépendances PHP et compilation des assets (Vite)
 RUN composer install --no-dev --optimize-autoloader
+RUN npm install && npm run build
+
+# 6. Permissions
 RUN chown -R www-data:www-data /var/www/html/storage /var/www/html/bootstrap/cache
 
-# 4. Configuration cruciale du port pour Render
+# 7. Configuration du port Render
 RUN sed -i "s/80/\${PORT:-10000}/g" /etc/apache2/ports.conf /etc/apache2/sites-available/000-default.conf
 EXPOSE ${PORT:-10000}
 
-# 5. COMMANDE DE DÉMARRAGE UNIQUE
-# NE PAS ajouter de commandes de migration ici
 CMD ["apache2-foreground"]
