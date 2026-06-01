@@ -42,41 +42,27 @@
 # 1. Utilisation d'une image PHP 8.2 avec Apache
 FROM php:8.2-apache
 
-# 2. Installation des dépendances système nécessaires
-RUN apt-get update && apt-get install -y \
-    libpng-dev \
-    libjpeg-dev \
-    libfreetype6-dev \
-    libpq-dev \
-    zip \
-    unzip \
-    git \
+# 1. Installation des dépendances
+RUN apt-get update && apt-get install -y libpng-dev libjpeg-dev libfreetype6-dev libpq-dev zip unzip git \
     && docker-php-ext-configure gd --with-freetype --with-jpeg \
     && docker-php-ext-install -j$(nproc) gd pdo pdo_mysql pdo_pgsql
 
-# 3. Installation de Composer
 COPY --from=composer:latest /usr/bin/composer /usr/bin/composer
 
-# 4. Configuration d'Apache pour Laravel
-# Modification du répertoire racine vers /public et activation du rewrite
+# 2. Configuration d'Apache
 RUN sed -i 's|/var/www/html|/var/www/html/public|g' /etc/apache2/sites-available/000-default.conf
 RUN a2enmod rewrite
 
-# 5. Préparation de l'application
+# 3. Préparation du code
 WORKDIR /var/www/html
 COPY . .
-
-# 6. Installation des dépendances PHP et gestion des permissions
 RUN composer install --no-dev --optimize-autoloader
 RUN chown -R www-data:www-data /var/www/html/storage /var/www/html/bootstrap/cache
 
-# 7. Configuration du port dynamique (Crucial pour Render)
-# Cette étape remplace le port 80 par le port dynamique fourni par Render
+# 4. Configuration cruciale du port pour Render
 RUN sed -i "s/80/\${PORT:-10000}/g" /etc/apache2/ports.conf /etc/apache2/sites-available/000-default.conf
-
-# 8. Exposition du port
 EXPOSE ${PORT:-10000}
 
-# 9. Lancement du serveur Apache au premier plan
-# NE PAS ajouter de commandes comme "migrate" ici, faites-le via le Shell Render
+# 5. COMMANDE DE DÉMARRAGE UNIQUE
+# NE PAS ajouter de commandes de migration ici
 CMD ["apache2-foreground"]
