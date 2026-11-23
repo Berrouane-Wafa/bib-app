@@ -1,14 +1,33 @@
 #!/bin/bash
-# Exécuter les migrations de la base de données
+set -e
+
+cd /var/www/html
+
+# Create Laravel writable directories
+mkdir -p storage/logs \
+         storage/framework/cache/data \
+         storage/framework/sessions \
+         storage/framework/views \
+         bootstrap/cache
+
+# Set permissions before running Artisan
+chown -R www-data:www-data storage bootstrap/cache
+chmod -R ug+rwX storage bootstrap/cache
+
+# Database migrations
 php artisan migrate --force
 
-# Exécuter les seeders pour insérer les données initiales (comme l'admin)
+# Seed initial data
 php artisan db:seed --force
 
-# Optimiser les performances
+# Optimize Laravel
 php artisan config:cache
 php artisan route:cache
 php artisan view:cache
 
-# Lancer le serveur Apache
-apache2-foreground
+# Correct ownership again because Artisan may create files as root
+chown -R www-data:www-data storage bootstrap/cache
+chmod -R ug+rwX storage bootstrap/cache
+
+# Start Apache
+exec apache2-foreground
