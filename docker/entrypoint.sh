@@ -30,4 +30,4 @@ chown -R www-data:www-data storage bootstrap/cache
 chmod -R ug+rwX storage bootstrap/cache
 
 # Start Apache
-exec apache2-foreground
+apache2-foreground
